@@ -1,0 +1,150 @@
+# AgentStack - 3 LLM Models in Docker
+# ====================================================================
+# Services: 3 Ollama containers, one model per container
+# Purpose: Local LLM inference without external APIs
+# Architecture: Each container is independent and scalable
+# ====================================================================
+
+services:
+  # ====================================================================
+  # Container 1: llama3.2:1b
+  # ====================================================================
+  # Model: Llama 3.2 (1B parameters)
+  # Port: 11434 → 11434
+  # Size: ~650 MB
+  # Speed: Fast
+  # RAM: ~2 GB during inference
+  # Use Case: General-purpose tasks, good balance
+  ollama_llama:
+    image: ollama/ollama:latest
+    container_name: agentstack_llama3.2
+    hostname: ollama_llama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_llama_data:/root/.ollama
+      - ./scripts/entrypoint.sh:/entrypoint.sh
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - MODEL_NAME=llama3.2:1b
+    entrypoint: bash /entrypoint.sh
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G
+        reservations:
+          memory: 1.5G
+    restart: unless-stopped
+    networks:
+      - agentstack_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ====================================================================
+  # Container 2: qwen2.5:0.5b
+  # ====================================================================
+  # Model: Qwen 2.5 (0.5B parameters - Ultra-lightweight)
+  # Port: 11435 → 11434
+  # Size: ~397 MB
+  # Speed: Very Fast
+  # RAM: ~1 GB during inference
+  # Use Case: Quick responses, simple queries
+  ollama_qwen:
+    image: ollama/ollama:latest
+    container_name: agentstack_qwen2.5
+    hostname: ollama_qwen
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_qwen_data:/root/.ollama
+      - ./scripts/entrypoint.sh:/entrypoint.sh
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - MODEL_NAME=qwen2.5:0.5b
+    entrypoint: bash /entrypoint.sh
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    restart: unless-stopped
+    networks:
+      - agentstack_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ====================================================================
+  # Container 3: phi3:mini
+  # ====================================================================
+  # Model: Phi 3 Mini (Lightweight with good quality)
+  # Port: 11436 → 11434
+  # Size: ~2.3 GB
+  # Speed: Fast (good balance of speed/quality)
+  # RAM: ~2.5 GB during inference
+  # Use Case: Better responses, more complex tasks
+  ollama_phi:
+    image: ollama/ollama:latest
+    container_name: agentstack_phi3
+    hostname: ollama_phi
+    ports:
+      - "11436:11434"
+    volumes:
+      - ollama_phi_data:/root/.ollama
+      - ./scripts/entrypoint.sh:/entrypoint.sh
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - MODEL_NAME=phi3:mini
+    entrypoint: bash /entrypoint.sh
+    deploy:
+      resources:
+        limits:
+          memory: 3.5G
+        reservations:
+          memory: 2.5G
+    restart: unless-stopped
+    networks:
+      - agentstack_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# ====================================================================
+# VOLUMES - Persistent storage for each model
+# ====================================================================
+volumes:
+  # Storage for llama3.2:1b model
+  ollama_llama_data:
+    driver: local
+    labels:
+      description: "Llama 3.2 (1B) model storage"
+
+  # Storage for qwen2.5:0.5b model
+  ollama_qwen_data:
+    driver: local
+    labels:
+      description: "Qwen 2.5 (0.5B) model storage"
+
+  # Storage for phi3:mini model
+  ollama_phi_data:
+    driver: local
+    labels:
+      description: "Phi 3 Mini model storage"
+
+# ====================================================================
+# NETWORKS - Isolated bridge network for containers
+# ====================================================================
+networks:
+  agentstack_network:
+    driver: bridge
+    name: agentstack_network
+    labels:
+      description: "AgentStack LLM network"
